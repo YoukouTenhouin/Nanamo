@@ -1,0 +1,3 @@
+srcs = [
+  'src/main.cc'
+]
