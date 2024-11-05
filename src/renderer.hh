@@ -1,4 +1,4 @@
-/** glfw_window.hh -- Utilities to handle a GLFW window */
+/** renderer.hh -- Renderer definitions */
 
 /*
  * Copyright 2024 Youkou Tenhouin <youkou@tenhou.in>
@@ -22,37 +22,30 @@
  * SOFTWARE.
  */
 
-#ifndef NNM_GLFW_WINDOW_HH_
-#define NNM_GLFW_WINDOW_HH_
+#ifndef NNM_RENDERER_HH_
+#define NNM_RENDERER_HH_
 
-#include <memory>
-
+#include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
 namespace nanamo {
 
-struct WindowDeleter {
-    inline void
-    operator()(GLFWwindow* ptr)
-    {
-        glfwDestroyWindow(ptr);
-    }
+struct RendererOptions {
+    bool border = false;
+    bool resizable = false;
+    bool transparent = false;
 };
 
-using Window = std::unique_ptr<GLFWwindow, WindowDeleter>;
+class Renderer {
+  private:
+    GLFWwindow *m_window = nullptr;
 
-inline Window
-createWindow(int width, int height, const char* title, GLFWmonitor* monitor,
-             GLFWwindow* share)
-{
-    auto ptr = glfwCreateWindow(width, height, title, monitor, share);
-    if (!ptr) {
-        return {};
-    }
-
-    return Window(ptr, WindowDeleter{});
-}
+  public:
+    Renderer(const RendererOptions&);
+    ~Renderer();
+    void mainLoop();
+};
 
 } // namespace nanamo
 
-#endif /* NNM_GLFW_WINDOW_HH_ */
+#endif /* NNM_RENDERER_HH_ */

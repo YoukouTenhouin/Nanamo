@@ -23,15 +23,10 @@
  */
 
 #include <iostream>
-#include <memory>
-#include <mutex>
 
 #include <getopt.h>
 
-#include <GL/gl.h>
-#include <GLFW/glfw3.h>
-
-#include "glfw_window.hh"
+#include "renderer.hh"
 
 static bool ARG_border = false;
 static bool ARG_resizable = false;
@@ -77,9 +72,9 @@ parseArgs(int argc, char** argv)
         case 'h':
             usage();
             std::exit(0);
-	case 'r':
-	    ARG_resizable = true;
-	    break;
+        case 'r':
+            ARG_resizable = true;
+            break;
         case 't':
             ARG_transparent = true;
             break;
@@ -93,55 +88,21 @@ parseArgs(int argc, char** argv)
     }
 }
 
-static void
-errorCallback(int errcode, const char* desc)
-{
-    static std::mutex lock;
-    std::unique_lock guard(lock);
-
-    std::cerr << "GLFW error " << errcode << ": " << desc << std::endl;
-}
-
-void
-mainLoop()
-{
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    glfwWindowHint(GLFW_DECORATED, ARG_border ? GLFW_TRUE : GLFW_FALSE);
-    glfwWindowHint(GLFW_RESIZABLE, ARG_resizable ? GLFW_TRUE : GLFW_FALSE);
-    glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER,
-                   ARG_transparent ? GLFW_TRUE : GLFW_FALSE);
-
-    nanamo::Window window =
-        nanamo::createWindow(640, 480, "Nanamo", nullptr, nullptr);
-    if (!window) {
-        throw std::runtime_error("failed to create GLFW window");
-    }
-
-    glfwMakeContextCurrent(window.get());
-
-    while (!glfwWindowShouldClose(window.get())) {
-        glClear(GL_COLOR_BUFFER_BIT);
-
-        glfwSwapBuffers(window.get());
-        glfwPollEvents();
-    }
-}
-
 int
 main(int argc, char* argv[])
 {
     parseArgs(argc, argv);
 
-    if (!glfwInit()) {
-        std::cerr << "GLFW initialization failed" << std::endl;
-        std::abort();
-    }
-    glfwSetErrorCallback(&errorCallback);
+    nanamo::RendererOptions options = {
+        .border = ARG_border,
+        .resizable = ARG_resizable,
+        .transparent = ARG_transparent,
+    };
+
+    nanamo::Renderer renderer(options);
 
     try {
-        mainLoop();
+        renderer.mainLoop();
     } catch (const std::exception& e) {
         std::cerr << "Exception thrown from main loop: " << e.what()
                   << std::endl;
