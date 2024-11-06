@@ -23,14 +23,19 @@
  */
 
 #include <iostream>
+#include <string>
+#include <string_view>
 
 #include <getopt.h>
+
+#include <cef_app.h>
 
 #include "renderer.hh"
 
 static bool ARG_border = false;
 static bool ARG_resizable = false;
 static bool ARG_transparent = false;
+static std::string ARG_url = "";
 
 static const char* cmdName = "nanamo";
 
@@ -86,17 +91,54 @@ parseArgs(int argc, char** argv)
             std::abort();
         }
     }
+
+    if (argc - optind != 1) {
+        if (optind >= argc) {
+            std::cerr << "error: not enough arguments" << std::endl;
+        } else {
+            std::cerr << "error: too many arugments" << std::endl;
+        }
+        usage(std::cerr);
+        std::exit(-1);
+    }
+    ARG_url = argv[optind];
+}
+
+static void
+startCEF(int argc, char* argv[])
+{
+    CefMainArgs args(argc, argv);
+    auto result = CefExecuteProcess(args, nullptr, nullptr);
+    if (result == -1) {
+        /* Called for the browser process. */
+    } else if (result >= 0) {
+        /* Forked process has ended. */
+        std::exit(result);
+    }
+
+    CefSettings settings;
+    settings.windowless_rendering_enabled = true;
+    CefString(&settings.cache_path) = "/tmp/nanamo-cache";
+
+    CefInitialize(args, settings, nullptr, nullptr);
 }
 
 int
 main(int argc, char* argv[])
 {
-    parseArgs(argc, argv);
+    if (std::string_view(argv[1]).starts_with("--type")) {
+        /* This is a CEF helper process, skip argument parsing */
+    } else {
+        parseArgs(argc, argv);
+    }
+
+    startCEF(argc, argv);
 
     nanamo::RendererOptions options = {
         .border = ARG_border,
         .resizable = ARG_resizable,
         .transparent = ARG_transparent,
+        .url = ARG_url,
     };
 
     nanamo::Renderer renderer(options);
@@ -108,5 +150,5 @@ main(int argc, char* argv[])
                   << std::endl;
     }
 
-    glfwTerminate();
+    CefShutdown();
 }

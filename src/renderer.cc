@@ -26,6 +26,8 @@
 #include <mutex>
 #include <stdexcept>
 
+#include <cef_app.h>
+
 #include <glm/ext.hpp>
 #include <glm/glm.hpp>
 
@@ -54,6 +56,7 @@ Renderer::Renderer(const RendererOptions& opts)
     m_createProgram();
     m_initBuffers();
     m_initTexture();
+    m_spawnBrowser(opts);
 }
 
 Renderer::~Renderer()
@@ -64,6 +67,13 @@ Renderer::~Renderer()
 
     glfwDestroyWindow(m_window);
     glfwTerminate();
+}
+
+static void
+windowResizeCallback(GLFWwindow* window, int width, int height)
+{
+    auto rendererPtr = static_cast<Renderer*>(glfwGetWindowUserPointer(window));
+    rendererPtr->onResize(width, height);
 }
 
 void
@@ -81,6 +91,8 @@ Renderer::m_createWindow(const RendererOptions& opts)
     if (!m_window) {
         throw std::runtime_error("failed to create GLFW window");
     }
+    glfwSetWindowUserPointer(m_window, this);
+    glfwSetWindowSizeCallback(m_window, windowResizeCallback);
 
     glfwMakeContextCurrent(m_window);
     glewExperimental = true;
@@ -133,7 +145,7 @@ Renderer::m_createProgram()
         "layout(location = 1) in vec2 uv;\n"
         "out vec2 UV;\n"
         "void main() {\n"
-        "UV = uv;\n"
+        "UV = vec2(uv.x, 1.0 - uv.y);\n"
         "gl_Position = vec4(pos, 0.0, 1.0);\n"
         "}";
     static const char* fragShaderCode =
@@ -226,23 +238,30 @@ Renderer::m_initBuffers()
 void
 Renderer::m_initTexture()
 {
-    static GLubyte values[] = {
-        /* clang-format off */
-	0, 255, 0, 255,
-	255, 255, 255, 127,
-	255, 0, 0, 255,
-	0, 0, 255, 255,
-        /* clang-format on */
-    };
-
     glGenTextures(1, &m_texture);
     glBindTexture(GL_TEXTURE_2D, m_texture);
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+}
 
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 2, 2, 0, GL_RGBA, GL_UNSIGNED_BYTE,
-                 values);
+void
+Renderer::m_spawnBrowser(const RendererOptions& opts)
+{
+    CefBrowserSettings browserSettings;
+    browserSettings.windowless_frame_rate = 60;
+
+    CefWindowInfo windowInfo;
+    windowInfo.SetAsWindowless(0);
+
+    m_renderHandler = new BrowserRenderHandler(640, 480);
+    m_browserClient = new BrowserClient(m_renderHandler);
+    m_browser =
+        CefBrowserHost::CreateBrowserSync(windowInfo, m_browserClient, opts.url,
+                                          browserSettings, nullptr, nullptr);
+    if (!m_browser) {
+        throw std::runtime_error("Failed to create browser");
+    }
 }
 
 void
@@ -270,10 +289,20 @@ Renderer::m_render()
 }
 
 void
+Renderer::onResize(int width, int height)
+{
+    glViewport(0, 0, width, height);
+
+    m_renderHandler->resize(width, height);
+    m_browser->GetHost()->WasResized();
+}
+
+void
 Renderer::mainLoop()
 {
-    glClearColor(0.0, 0.0, 0.4, 0.5);
+    glClearColor(0.0, 0.0, 0.0, 1.0);
     while (!glfwWindowShouldClose(m_window)) {
+        CefDoMessageLoopWork();
         glClear(GL_COLOR_BUFFER_BIT);
 
         m_render();

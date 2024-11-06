@@ -1,4 +1,4 @@
-/** renderer.hh -- Renderer definitions */
+/** browser.cc -- Browser integration implementation */
 
 /*
  * Copyright 2024 Youkou Tenhouin <youkou@tenhou.in>
@@ -22,59 +22,55 @@
  * SOFTWARE.
  */
 
-#ifndef NNM_RENDERER_HH_
-#define NNM_RENDERER_HH_
-
-#include <string>
+#include <iostream>
 
 #include <GL/glew.h>
-#include <GLFW/glfw3.h>
 
 #include "browser.hh"
 
 namespace nanamo {
 
-struct RendererOptions {
-    bool border = false;
-    bool resizable = false;
-    bool transparent = false;
-    std::string url = "";
-};
+BrowserRenderHandler::BrowserRenderHandler(int width, int height)
+    : m_width(width), m_height(height)
+{
+}
 
-class Renderer {
-  private:
-    GLFWwindow* m_window = nullptr;
+void
+BrowserRenderHandler::GetViewRect(CefRefPtr<CefBrowser>, CefRect& rect)
+{
+    rect = CefRect(0, 0, m_width, m_height);
+}
 
-    GLuint m_program;
-    GLuint m_vertexArray;
-    GLuint m_vertexBuffer;
-    GLuint m_uvBuffer;
-    GLuint m_texture;
-    GLuint m_posLocation;
-    GLuint m_uvLocation;
-    GLuint m_texLocation;
+void
+BrowserRenderHandler::OnPaint(CefRefPtr<CefBrowser>, PaintElementType,
+                              const RectList&, const void* data, int width,
+                              int height)
+{
+    if (!data || width <= 0 || height <= 0) {
+        /* skip */
+        return;
+    }
 
-    CefRefPtr<BrowserRenderHandler> m_renderHandler;
-    CefRefPtr<BrowserClient> m_browserClient;
-    CefRefPtr<CefBrowser> m_browser;
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_BGRA,
+                 GL_UNSIGNED_BYTE, data);
+}
 
-    void m_createWindow(const RendererOptions&);
-    void m_createProgram();
-    void m_initBuffers();
-    void m_initTexture();
-    void m_spawnBrowser(const RendererOptions&);
+void
+BrowserRenderHandler::resize(int width, int height)
+{
+    m_width = width;
+    m_height = height;
+}
 
-    void m_render();
+BrowserClient::BrowserClient(CefRefPtr<BrowserRenderHandler> rh)
+    : m_renderHandler(rh)
+{
+}
 
-  public:
-    Renderer(const RendererOptions&);
-    ~Renderer();
-
-    void onResize(int width, int height);
-
-    void mainLoop();
-};
+CefRefPtr<CefRenderHandler>
+BrowserClient::GetRenderHandler()
+{
+    return m_renderHandler;
+}
 
 } // namespace nanamo
-
-#endif /* NNM_RENDERER_HH_ */

@@ -1,4 +1,4 @@
-/** renderer.hh -- Renderer definitions */
+/** browser.hh -- Browser integration definition */
 
 /*
  * Copyright 2024 Youkou Tenhouin <youkou@tenhou.in>
@@ -22,59 +22,43 @@
  * SOFTWARE.
  */
 
-#ifndef NNM_RENDERER_HH_
-#define NNM_RENDERER_HH_
+#ifndef NNM_RENDER_HANDLER_HH_
+#define NNM_RENDER_HANDLER_HH_
 
-#include <string>
-
-#include <GL/glew.h>
-#include <GLFW/glfw3.h>
-
-#include "browser.hh"
+#include <cef_client.h>
+#include <cef_render_handler.h>
 
 namespace nanamo {
 
-struct RendererOptions {
-    bool border = false;
-    bool resizable = false;
-    bool transparent = false;
-    std::string url = "";
-};
-
-class Renderer {
+class BrowserRenderHandler : public CefRenderHandler {
   private:
-    GLFWwindow* m_window = nullptr;
-
-    GLuint m_program;
-    GLuint m_vertexArray;
-    GLuint m_vertexBuffer;
-    GLuint m_uvBuffer;
-    GLuint m_texture;
-    GLuint m_posLocation;
-    GLuint m_uvLocation;
-    GLuint m_texLocation;
-
-    CefRefPtr<BrowserRenderHandler> m_renderHandler;
-    CefRefPtr<BrowserClient> m_browserClient;
-    CefRefPtr<CefBrowser> m_browser;
-
-    void m_createWindow(const RendererOptions&);
-    void m_createProgram();
-    void m_initBuffers();
-    void m_initTexture();
-    void m_spawnBrowser(const RendererOptions&);
-
-    void m_render();
+    int m_width = 0;
+    int m_height = 0;
 
   public:
-    Renderer(const RendererOptions&);
-    ~Renderer();
+    BrowserRenderHandler(int width, int height);
 
-    void onResize(int width, int height);
+    void GetViewRect(CefRefPtr<CefBrowser>, CefRect&) override final;
+    void OnPaint(CefRefPtr<CefBrowser>, PaintElementType, const RectList&,
+                 const void*, int width, int height) override final;
 
-    void mainLoop();
+    void resize(int width, int height);
+
+    IMPLEMENT_REFCOUNTING(BrowserRenderHandler);
+};
+
+class BrowserClient : public CefClient {
+  private:
+    CefRefPtr<BrowserRenderHandler> m_renderHandler;
+
+  public:
+    BrowserClient(CefRefPtr<BrowserRenderHandler>);
+
+    CefRefPtr<CefRenderHandler> GetRenderHandler() override final;
+
+    IMPLEMENT_REFCOUNTING(BrowserClient);
 };
 
 } // namespace nanamo
 
-#endif /* NNM_RENDERER_HH_ */
+#endif /* NNM_RENDER_HANDLER_HH_ */

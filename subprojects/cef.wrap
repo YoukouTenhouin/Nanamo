@@ -1,0 +1,9 @@
+[wrap-file]
+source_url = https://cef-builds.spotifycdn.com/cef_binary_118.6.10%2Bg38848f1%2Bchromium-118.0.5993.119_linux64_minimal.tar.bz2
+source_filename = cef_binary_118.6.10_minimal.tar.bz2
+source_hash = b3a932809e2adac4b6895b709da88a3219bce87fd5048b931129b2de6f16e2ce
+directory = cef_binary_118.6.10+g38848f1+chromium-118.0.5993.119_linux64_minimal
+patch_directory = cef
+
+[provide]
+dependency_names = cef
