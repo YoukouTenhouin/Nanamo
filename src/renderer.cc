@@ -69,11 +69,31 @@ Renderer::~Renderer()
     glfwTerminate();
 }
 
+static auto
+getRendererPtr(GLFWwindow* win)
+{
+    return static_cast<Renderer*>(glfwGetWindowUserPointer(win));
+}
+
 static void
 windowResizeCallback(GLFWwindow* window, int width, int height)
 {
-    auto rendererPtr = static_cast<Renderer*>(glfwGetWindowUserPointer(window));
+    auto rendererPtr = getRendererPtr(window);
     rendererPtr->onResize(width, height);
+}
+
+static void
+mouseMoveCallback(GLFWwindow* window, double x, double y)
+{
+    auto rendererPtr = getRendererPtr(window);
+    rendererPtr->onMouseMove(x, y);
+}
+
+static void
+mouseClickCallback(GLFWwindow* window, int button, int action, int)
+{
+    auto rendererPtr = getRendererPtr(window);
+    rendererPtr->onMouseClick(button, action);
 }
 
 void
@@ -93,6 +113,8 @@ Renderer::m_createWindow(const RendererOptions& opts)
     }
     glfwSetWindowUserPointer(m_window, this);
     glfwSetWindowSizeCallback(m_window, windowResizeCallback);
+    glfwSetCursorPosCallback(m_window, mouseMoveCallback);
+    glfwSetMouseButtonCallback(m_window, mouseClickCallback);
 
     glfwMakeContextCurrent(m_window);
     glewExperimental = true;
@@ -295,6 +317,34 @@ Renderer::onResize(int width, int height)
 
     m_renderHandler->resize(width, height);
     m_browser->GetHost()->WasResized();
+}
+
+void
+Renderer::onMouseMove(double x, double y)
+{
+    m_mouseX = x;
+    m_mouseY = y;
+
+    CefMouseEvent ev;
+    ev.x = m_mouseX;
+    ev.y = m_mouseY;
+    m_browser->GetHost()->SendMouseMoveEvent(ev, false);
+}
+
+void
+Renderer::onMouseClick(int button, int action)
+{
+    CefMouseEvent ev;
+    ev.x = m_mouseX;
+    ev.y = m_mouseY;
+
+    if (button == GLFW_MOUSE_BUTTON_LEFT) {
+        if (action == GLFW_PRESS) {
+	    m_browser->GetHost()->SendMouseClickEvent(ev, MBT_LEFT, false, 1);
+        } else {
+	    m_browser->GetHost()->SendMouseClickEvent(ev, MBT_LEFT, true, 0);
+	}
+    }
 }
 
 void

@@ -54,6 +54,9 @@ class Renderer {
     GLuint m_uvLocation;
     GLuint m_texLocation;
 
+    double m_mouseX;
+    double m_mouseY;
+
     CefRefPtr<BrowserRenderHandler> m_renderHandler;
     CefRefPtr<BrowserClient> m_browserClient;
     CefRefPtr<CefBrowser> m_browser;
@@ -71,6 +74,8 @@ class Renderer {
     ~Renderer();
 
     void onResize(int width, int height);
+    void onMouseMove(double x, double y);
+    void onMouseClick(int button, int action);
 
     void mainLoop();
 };
