@@ -40,6 +40,22 @@ class Renderer {
   private:
     GLFWwindow *m_window = nullptr;
 
+    GLuint m_program;
+    GLuint m_vertexArray;
+    GLuint m_vertexBuffer;
+    GLuint m_uvBuffer;
+    GLuint m_texture;
+    GLuint m_posLocation;
+    GLuint m_uvLocation;
+    GLuint m_texLocation;
+
+    void m_createWindow(const RendererOptions&);
+    void m_createProgram();
+    void m_initBuffers();
+    void m_initTexture();
+
+    void m_render();
+
   public:
     Renderer(const RendererOptions&);
     ~Renderer();
